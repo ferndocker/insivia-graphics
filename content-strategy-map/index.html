@@ -154,6 +154,48 @@
     .reset-btn:hover { background:rgba(255,255,255,.1);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.2); }
     .reset-btn svg { width:11px;height:11px; }
 
+    /* ── Inspiration button ── */
+    .inspiration-btn {
+      position:absolute;bottom:65px;right:12px;z-index:10;
+      display:flex;align-items:center;gap:5px;
+      padding:5px 10px;border-radius:8px;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.32);font-size:10.5px;font-family:inherit;cursor:pointer;
+      transition:background .2s,color .2s,border-color .2s;
+    }
+    .inspiration-btn:hover { background:rgba(255,255,255,.1);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.2); }
+    .inspiration-btn svg { width:11px;height:11px; }
+
+    /* ── Inspiration Modal ── */
+    .modal-overlay {
+      position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);
+      display:none;align-items:center;justify-content:center;z-index:1000;
+      animation:fadeIn .2s ease;
+    }
+    .modal-overlay.open { display:flex; }
+    @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+    .modal-content {
+      background:rgba(8,12,24,.95);border:1px solid rgba(255,255,255,.08);
+      border-radius:20px;padding:32px;max-width:700px;width:90%;max-height:80vh;
+      overflow-y:auto;animation:slideUp .3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;} }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:16px; }
+    .modal-header h2 { font-size:20px;font-weight:700;color:#fff; }
+    .modal-close { background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:24px;transition:color .2s; }
+    .modal-close:hover { color:rgba(255,255,255,.8); }
+    .inspiration-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px; }
+    .inspiration-item { border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.01); }
+    .inspiration-item img { width:100%;height:150px;object-fit:cover;display:block; }
+    .inspiration-item p { padding:12px;font-size:11px;color:rgba(255,255,255,.6);text-align:center; }
+    .prompts-section h3 { font-size:14px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em; }
+    .prompts-section { border-top:1px solid rgba(255,255,255,.06);padding-top:16px; }
+    .prompts-content { font-size:12px;color:rgba(255,255,255,.6);line-height:1.6;max-height:300px;overflow-y:auto; }
+    .prompts-content h4 { font-size:12px;font-weight:600;color:rgba(255,255,255,.7);margin-top:12px; }
+    .prompts-content p { margin:6px 0; }
+    .prompts-content ul { margin-left:20px;margin-top:6px; }
+    .prompts-content li { margin:4px 0; }
+
     /* ── Tooltip ── */
     #tooltip {
       position:fixed;pointer-events:none;z-index:9999;max-width:272px;
@@ -183,7 +225,8 @@
   </div>
 
   <div class="chart-wrap" id="chartWrap">
-    <a href="index.html" class="back-home-btn"><i data-lucide="arrow-left"></i> Back</a>
+    <a href="../index.html" class="back-home-btn"><i data-lucide="arrow-left"></i> Back</a>
+    <button class="inspiration-btn" id="inspirationBtn"><i data-lucide="lightbulb"></i> Inspiration</button>
     <svg class="svg-layer" id="svgLayer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690">
       <defs>
         <marker id="arr-r" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(239,83,80,.6)"/></marker>
@@ -207,6 +250,20 @@
     <div id="ttArrow" class="tt-arrow-label"></div>
     <div id="ttBody" class="tt-body"></div>
     <div id="ttTag"  class="tt-tag"></div>
+  </div>
+
+  <div id="inspirationModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Inspiration & Prompts</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="inspiration-grid" id="inspirationGrid"></div>
+      <div class="prompts-section">
+        <h3>Building Process</h3>
+        <div class="prompts-content" id="promptsContent">Loading...</div>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -711,6 +768,43 @@
       if (y < 8) y = 8;
       ttEl.style.left = x+'px'; ttEl.style.top = y+'px';
     }
+
+    /* ══════════════════════════════════════
+       INSPIRATION MODAL
+    ══════════════════════════════════════ */
+    const inspirationBtn = document.getElementById('inspirationBtn');
+    const inspirationModal = document.getElementById('inspirationModal');
+    const modalClose = document.getElementById('modalClose');
+    const inspirationGrid = document.getElementById('inspirationGrid');
+    const promptsContent = document.getElementById('promptsContent');
+
+    // Open modal
+    inspirationBtn?.addEventListener('click', async () => {
+      inspirationModal.classList.add('open');
+      
+      // Load inspiration image
+      inspirationGrid.innerHTML = '<div class="inspiration-item"><img src="inspiration/chart.png" alt="Content Strategy Chart"><p>Wireframe Reference</p></div>';
+      
+      // Load prompts
+      try {
+        const response = await fetch('inspiration/prompts.md');
+        const text = await response.text();
+        promptsContent.innerHTML = '<pre style="white-space:pre-wrap;font-family:inherit;font-size:11px;overflow:auto;max-height:300px;">' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+      } catch (e) {
+        promptsContent.innerHTML = '<p>Unable to load prompts.md</p>';
+      }
+    });
+
+    // Close modal
+    modalClose?.addEventListener('click', () => {
+      inspirationModal.classList.remove('open');
+    });
+
+    inspirationModal.addEventListener('click', (e) => {
+      if (e.target === inspirationModal) {
+        inspirationModal.classList.remove('open');
+      }
+    });
 
     /* ══════════════════════════════════════
        UTILS
