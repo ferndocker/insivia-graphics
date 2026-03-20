@@ -130,6 +130,18 @@
     .pr1 { animation:pulseRing 3.2s ease-out infinite;animation-delay:2.8s; }
     .pr2 { animation:pulseRing 3.2s ease-out infinite;animation-delay:4.3s; }
 
+    /* ── Back to home button ── */
+    .back-home-btn {
+      position:absolute;top:10px;left:12px;z-index:10;
+      display:flex;align-items:center;gap:5px;
+      padding:5px 10px;border-radius:8px;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.32);font-size:10.5px;font-family:inherit;cursor:pointer;
+      text-decoration:none;transition:background .2s,color .2s,border-color .2s;
+    }
+    .back-home-btn:hover { background:rgba(255,255,255,.1);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.2); }
+    .back-home-btn svg { width:11px;height:11px; }
+
     /* ── Reset button ── */
     .reset-btn {
       position:absolute;bottom:10px;right:12px;z-index:10;
@@ -171,6 +183,7 @@
   </div>
 
   <div class="chart-wrap" id="chartWrap">
+    <a href="index.html" class="back-home-btn"><i data-lucide="arrow-left"></i> Back</a>
     <svg class="svg-layer" id="svgLayer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690">
       <defs>
         <marker id="arr-r" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(239,83,80,.6)"/></marker>
