@@ -200,9 +200,12 @@
     }
 
     .project-icon svg {
+      display: block;
       width: 32px;
       height: 32px;
       stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
       opacity: 0.85;
       transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
                   opacity 0.3s ease;
@@ -316,7 +319,7 @@
       <!-- Content Strategy Map -->
       <a href="content-strategy-map.html" class="project-card" style="--accent: #66BB6A; --glow: rgba(102, 187, 106, 0.14);">
         <div class="project-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" preserveAspectRatio="xMidYMid meet">
             <circle cx="12" cy="12" r="10"/>
             <path d="M12 6v6m-6-3h12"/>
           </svg>
