@@ -248,26 +248,28 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .project-card a {
-      display: inline-block;
-      margin-top: 18px;
-      padding: 8px 14px;
-      border-radius: 8px;
-      background: rgba(102, 187, 106, 0.1);
-      border: 1px solid rgba(102, 187, 106, 0.3);
-      color: var(--accent, #66BB6A);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
+    .project-card {
       text-decoration: none;
-      text-transform: uppercase;
-      transition: all 0.2s ease;
-      cursor: pointer;
+      color: inherit;
+      display: block;
+      position: relative;
     }
 
-    .project-card:hover:not(.disabled) a {
-      background: rgba(102, 187, 106, 0.2);
-      border-color: rgba(102, 187, 106, 0.6);
+    .project-card::after {
+      content: '→';
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent, #66BB6A);
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .project-card:hover:not(.disabled)::after {
+      opacity: 1;
+      transform: translateX(4px);
     }
 
     .project-card.disabled {
@@ -312,7 +314,7 @@
 
     <div class="projects-grid">
       <!-- Content Strategy Map -->
-      <div class="project-card" style="--accent: #66BB6A; --glow: rgba(102, 187, 106, 0.14);">
+      <a href="content-strategy-map.html" class="project-card" style="--accent: #66BB6A; --glow: rgba(102, 187, 106, 0.14);">
         <div class="project-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="12" cy="12" r="10"/>
@@ -328,8 +330,7 @@
           <span>SVG</span>
           <span>JavaScript</span>
         </div>
-        <a href="content-strategy-map.html">View Project →</a>
-      </div>
+      </a>
 
       <!-- Template Card for new projects -->
       <div class="project-card disabled" style="--accent: rgba(255, 255, 255, 0.2); --glow: rgba(255, 255, 255, 0.05);">
