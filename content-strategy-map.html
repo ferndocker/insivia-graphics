@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B2B Content Strategy Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080c18;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.016) 1px, transparent 1px);
+      background-size: 55px 55px;
+    }
+
+    /* ambient blobs */
+    .gb { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; animation: blobFloat 14s ease-in-out infinite; }
+    .gb1 { width:440px;height:440px;background:#43A047;opacity:.09;top:-120px;left:28%;animation-delay:0s; }
+    .gb2 { width:320px;height:320px;background:#1565C0;opacity:.09;bottom:-90px;right:14%;animation-delay:4.5s; }
+    .gb3 { width:280px;height:280px;background:#7B1FA2;opacity:.08;top:38%;left:-90px;animation-delay:8s; }
+    @keyframes blobFloat {
+      0%,100%{transform:translate(0,0) scale(1);}
+      33%    {transform:translate(22px,-16px) scale(1.04);}
+      66%    {transform:translate(-12px,14px) scale(.97);}
+    }
+
+    /* ── Header ── */
+    .header { position:relative;z-index:2;text-align:center;margin-bottom:14px;animation:fadeDown .7s ease both; }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-14px);}to{opacity:1;transform:translateY(0);} }
+    .header h1 { font-size:19px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.42); }
+    .header h1 span { color:#66BB6A;font-weight:700; }
+    .header p { font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.07em;margin-top:5px; }
+
+    /* ── Chart canvas ── */
+    .chart-wrap { position:relative;width:1100px;height:690px;z-index:2; }
+
+    .svg-layer { position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none; }
+
+    /* ── NODE BASE ──
+       Key fix: opacity starts at 0 via animation 'from', but we NEVER set
+       opacity:0 as a plain CSS rule — that way cancelling the animation
+       doesn't snap the node back to invisible.
+    */
+    .node {
+      position: absolute;
+      border-radius: 16px;
+      padding: 15px 18px 16px;
+      border: 1px solid rgba(255,255,255,.07);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      cursor: grab;
+      /* No fixed height — content sizes the card */
+      overflow: hidden;
+      word-break: break-word;
+      transition: transform .38s cubic-bezier(.34,1.56,.64,1),
+                  box-shadow .3s ease, border-color .3s ease;
+      animation: nodeIn .65s cubic-bezier(.34,1.56,.64,1) forwards;
+      /* opacity is controlled ONLY by the animation, not by a plain rule */
+    }
+    @keyframes nodeIn {
+      /* start invisible, scale up */
+      0%   { opacity:0; transform:scale(.55) translateY(12px); }
+      100% { opacity:1; transform:scale(1)   translateY(0); }
+    }
+
+    /* accent bar */
+    .node::before {
+      content:'';position:absolute;top:0;left:16px;right:16px;height:2px;
+      border-radius:0 0 4px 4px;
+      background:var(--accent,#fff);opacity:.65;
+      transition:opacity .3s ease,left .3s ease,right .3s ease;
+    }
+    .node:hover::before { left:8px;right:8px;opacity:1; }
+    .node:hover:not(.is-dragging) { transform:translateY(-9px) scale(1.035) !important; }
+
+    /* Dragging: force visible, kill animation, no hover-lift */
+    .node.is-dragging {
+      cursor: grabbing !important;
+      z-index: 200 !important;
+      opacity: 1 !important;         /* ← THE critical fix */
+      animation: none !important;    /* safe now: we set opacity inline before removing anim */
+      transform: scale(1.04) !important;
+      transition: box-shadow .15s ease !important;
+    }
+
+    /* grip hint */
+    .node-grip { position:absolute;top:9px;right:10px;color:rgba(255,255,255,.18);pointer-events:none;opacity:0;transition:opacity .2s ease; }
+    .node-grip svg { width:11px;height:11px; }
+    .node:hover .node-grip { opacity:1; }
+
+    /* icon */
+    .node-icon { display:block;margin-bottom:8px;color:var(--accent,#fff);width:20px;flex-shrink:0; }
+    .node-icon svg { width:20px;height:20px;stroke-width:1.8;opacity:.85;transition:transform .38s cubic-bezier(.34,1.56,.64,1),opacity .3s ease; }
+    .node:hover:not(.is-dragging) .node-icon svg { transform:scale(1.28) rotate(-6deg);opacity:1; }
+
+    .node-title {
+      font-size: 12.5px; font-weight: 700; color: #fff;
+      line-height: 1.35; margin-bottom: 5px;
+    }
+    .node-body {
+      font-size: 11px; color: rgba(255,255,255,.52);
+      line-height: 1.55;
+      /* ensure text wraps gracefully */
+      white-space: normal;
+    }
+
+    /* ── Connection paths ── */
+    .conn-path { opacity:0; animation:fadeIn .6s ease forwards; }
+    @keyframes fadeIn { to { opacity:1; } }
+
+    /* ── Arrow info badges ── */
+    .arrow-info { pointer-events:all;cursor:pointer;opacity:0;animation:fadeIn .4s ease forwards; }
+    .arrow-info .ai-ring { transition:r .22s ease; }
+    .arrow-info:hover .ai-ring { r:13; }
+
+    /* ── Pulse rings ── */
+    @keyframes pulseRing { 0%{r:60;opacity:.22;}100%{r:120;opacity:0;} }
+    .pr1 { animation:pulseRing 3.2s ease-out infinite;animation-delay:2.8s; }
+    .pr2 { animation:pulseRing 3.2s ease-out infinite;animation-delay:4.3s; }
+
+    /* ── Reset button ── */
+    .reset-btn {
+      position:absolute;bottom:10px;right:12px;z-index:10;
+      display:flex;align-items:center;gap:5px;
+      padding:5px 10px;border-radius:8px;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.32);font-size:10.5px;font-family:inherit;cursor:pointer;
+      transition:background .2s,color .2s,border-color .2s;
+    }
+    .reset-btn:hover { background:rgba(255,255,255,.1);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.2); }
+    .reset-btn svg { width:11px;height:11px; }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position:fixed;pointer-events:none;z-index:9999;max-width:272px;
+      background:rgba(8,12,26,.97);border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;padding:14px 16px;
+      opacity:0;transform:translateY(6px) scale(.97);
+      transition:opacity .18s ease,transform .18s ease;
+      box-shadow:0 12px 40px rgba(0,0,0,.65);backdrop-filter:blur(20px);
+    }
+    #tooltip.show { opacity:1;transform:translateY(0) scale(1); }
+    .tt-hd { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+    .tt-dot { width:9px;height:9px;border-radius:50%;flex-shrink:0; }
+    .tt-title { font-size:12px;font-weight:700;color:#fff;line-height:1.3; }
+    .tt-div { height:1px;background:rgba(255,255,255,.08);margin-bottom:8px; }
+    .tt-body { font-size:11px;color:rgba(255,255,255,.62);line-height:1.65; }
+    .tt-tag { display:none;margin-top:9px;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.06);color:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.08); }
+    .tt-arrow-label { display:none;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px; }
+  </style>
+</head>
+<body>
+
+  <div class="gb gb1"></div><div class="gb gb2"></div><div class="gb gb3"></div>
+
+  <div class="header">
+    <h1>B2B Content <span>Strategy</span> Map</h1>
+    <p>Drag nodes to rearrange · Hover ⓘ on connections for context · Layout saves automatically</p>
+  </div>
+
+  <div class="chart-wrap" id="chartWrap">
+    <svg class="svg-layer" id="svgLayer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690">
+      <defs>
+        <marker id="arr-r" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(239,83,80,.6)"/></marker>
+        <marker id="arr-y" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(255,213,79,.6)"/></marker>
+        <marker id="arr-a" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(255,202,40,.6)"/></marker>
+        <marker id="arr-t" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(77,182,172,.6)"/></marker>
+        <marker id="arr-b" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(100,181,246,.6)"/></marker>
+        <marker id="arr-p" markerWidth="7" markerHeight="5.5" refX="6.5" refY="2.75" orient="auto"><polygon points="0 0,7 2.75,0 5.5" fill="rgba(149,117,205,.6)"/></marker>
+      </defs>
+      <!-- Pulse rings around commercial — positions updated by JS -->
+      <circle id="pr1" class="pr1" cx="571" cy="347" r="60" fill="none" stroke="rgba(102,187,106,.18)" stroke-width="1"/>
+      <circle id="pr2" class="pr2" cx="571" cy="347" r="60" fill="none" stroke="rgba(102,187,106,.11)" stroke-width="1"/>
+    </svg>
+    <button class="reset-btn" id="resetBtn"><i data-lucide="rotate-ccw"></i> Reset Layout</button>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip">
+    <div class="tt-hd"><div class="tt-dot" id="ttDot"></div><div class="tt-title" id="ttTitle"></div></div>
+    <div class="tt-div"></div>
+    <div id="ttArrow" class="tt-arrow-label"></div>
+    <div id="ttBody" class="tt-body"></div>
+    <div id="ttTag"  class="tt-tag"></div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>
+  (() => {
+
+    /* ═══════════════════════════════════════════════════════════════
+       NODE DATA — edit here to update content, positions, and styles
+    ═══════════════════════════════════════════════════════════════ */
+    const NODES = [
+      {
+        id:        "node-commercial",
+        icon:      "target",
+        title:     "Commercial Intent Page",
+        body:      "\"B2B SaaS Website Design Agency\"",
+        tag:       "Core Conversion",
+        tooltip:   "Your primary conversion target. Ranks for high-intent searches like 'B2B SaaS Website Design Agency'. Every other content type feeds authority, trust, and traffic directly to this page.",
+        accent:    "#66BB6A",
+        gradient:  ["rgba(67,160,71,.15)",  "rgba(27,94,32,.24)"],
+        border:    "rgba(102,187,106,.22)",
+        glow:      "rgba(67,160,71,.14)",
+        hoverGlow: "rgba(67,160,71,.38)",
+        hoverBorder: "rgba(102,187,106,.48)",
+        defaultPos: { left: 460, top: 285 },
+        width:     218,
+        animDelay: 0.1
+      },
+      {
+        id:        "node-question",
+        icon:      "help-circle",
+        title:     "Question / Problem Pages",
+        body:      "Common questions, specific problems, triggers, issues, vendor selection.",
+        tag:       "Top of Funnel",
+        tooltip:   "Answer questions real buyers are searching for — common questions, specific problems, trigger events, issues, and vendor selection queries. Captures early research traffic and builds awareness.",
+        accent:    "#4DB6AC",
+        gradient:  ["rgba(38,166,154,.15)",  "rgba(0,77,64,.24)"],
+        border:    "rgba(77,182,172,.2)",
+        glow:      "rgba(38,166,154,.1)",
+        hoverGlow: "rgba(38,166,154,.34)",
+        hoverBorder: "rgba(77,182,172,.42)",
+        defaultPos: { left: 470, top: 22 },
+        width:     196,
+        animDelay: 0.3
+      },
+      {
+        id:        "node-thesis",
+        icon:      "book-open",
+        title:     "Thesis Pages",
+        body:      "Buyer-centric worldview, validation doctrine, buyer-readiness framework.",
+        tag:       "Authority",
+        tooltip:   "Build lasting authority with a buyer-centric worldview, validation doctrine, and buyer-readiness framework. Positions you as the expert buyers trust when evaluating vendors.",
+        accent:    "#64B5F6",
+        gradient:  ["rgba(66,165,245,.15)",  "rgba(13,71,161,.24)"],
+        border:    "rgba(100,181,246,.2)",
+        glow:      "rgba(66,165,245,.1)",
+        hoverGlow: "rgba(66,165,245,.34)",
+        hoverBorder: "rgba(100,181,246,.42)",
+        defaultPos: { left: 800, top: 155 },
+        width:     200,
+        animDelay: 0.5
+      },
+      {
+        id:        "node-proof",
+        icon:      "badge-check",
+        title:     "Proof Pages",
+        body:      "Success Stories",
+        tag:       "Trust Signal",
+        tooltip:   "Success stories and case studies that validate your claims. Provides the social proof and risk-reduction that bottom-of-funnel buyers need before making a decision.",
+        accent:    "#9575CD",
+        gradient:  ["rgba(149,117,205,.15)", "rgba(74,20,140,.24)"],
+        border:    "rgba(149,117,205,.2)",
+        glow:      "rgba(149,117,205,.1)",
+        hoverGlow: "rgba(149,117,205,.34)",
+        hoverBorder: "rgba(149,117,205,.42)",
+        defaultPos: { left: 546, top: 510 },
+        width:     180,
+        animDelay: 0.7
+      },
+      {
+        id:        "node-trend",
+        icon:      "trending-up",
+        title:     "Trend Pages",
+        body:      "Stats · Lists · News",
+        tag:       "Link Magnet",
+        tooltip:   "Stats, lists, and news content engineered to attract inbound links from publishers. Drives topical authority, referral traffic, and domain strength that lifts your commercial page.",
+        accent:    "#FFCA28",
+        gradient:  ["rgba(255,202,40,.13)",  "rgba(230,81,0,.13)"],
+        border:    "rgba(255,202,40,.2)",
+        glow:      "rgba(255,202,40,.09)",
+        hoverGlow: "rgba(255,202,40,.3)",
+        hoverBorder: "rgba(255,202,40,.42)",
+        defaultPos: { left: 190, top: 278 },
+        width:     178,
+        animDelay: 0.9
+      },
+      {
+        id:        "node-timedistinct",
+        icon:      "clock",
+        title:     "Time-Distinct Trend Pages",
+        body:      "One idea with a narrow window that will close.",
+        tag:       "Feeds Trend Pages",
+        tooltip:   "A single powerful idea with a narrow relevance window. Capitalize on breaking trends while they're hot to earn fast attention and timely backlinks.",
+        accent:    "#EF5350",
+        gradient:  ["rgba(239,83,80,.14)",   "rgba(183,28,28,.22)"],
+        border:    "rgba(239,83,80,.2)",
+        glow:      "rgba(239,83,80,.09)",
+        hoverGlow: "rgba(239,83,80,.32)",
+        hoverBorder: "rgba(239,83,80,.42)",
+        defaultPos: { left: 15, top: 115 },
+        width:     158,
+        animDelay: 1.1
+      },
+      {
+        id:        "node-timeless",
+        icon:      "refresh-cw",
+        title:     "Timeless Trend Pages",
+        body:      "Update regularly and continue to gain traffic.",
+        tag:       "Feeds Trend Pages",
+        tooltip:   "Evergreen content refreshed regularly. Compounds over time — updates maintain rankings, attract recurring links, and extend long-tail reach year over year.",
+        accent:    "#FFD54F",
+        gradient:  ["rgba(255,213,79,.13)",  "rgba(255,111,0,.13)"],
+        border:    "rgba(255,213,79,.2)",
+        glow:      "rgba(255,213,79,.09)",
+        hoverGlow: "rgba(255,213,79,.3)",
+        hoverBorder: "rgba(255,213,79,.42)",
+        defaultPos: { left: 15, top: 450 },
+        width:     158,
+        animDelay: 1.3
+      }
+    ];
+
+    /* ═══════════════════════════════════════════════════════════════
+       CONNECTION DATA — edit here to update arrows and badge tooltips
+    ═══════════════════════════════════════════════════════════════ */
+    const CONNECTIONS = [
+      {
+        id: "c1",
+        from: "node-timedistinct", fromEdge: "right",
+        to:   "node-trend",       toEdge:   "left",
+        stroke: "rgba(239,83,80,.35)", strokeWidth: 1.5, marker: "arr-r",
+        animDelay: 2.0
+      },
+      {
+        id: "c2",
+        from: "node-timeless", fromEdge: "right",
+        to:   "node-trend",    toEdge:   "left",
+        stroke: "rgba(255,213,79,.35)", strokeWidth: 1.5, marker: "arr-y",
+        animDelay: 2.15
+      },
+      {
+        id: "c3",
+        from: "node-trend",       fromEdge: "right",
+        to:   "node-commercial",  toEdge:   "left",
+        stroke: "rgba(255,202,40,.52)", strokeWidth: 1.8, marker: "arr-a",
+        animDelay: 2.3,
+        badge: {
+          color:  "#FFCA28",
+          title:  "Look to Drive Links",
+          label:  "Trend → Commercial",
+          detail: "Trend Pages (stats, lists, news) are engineered to attract inbound backlinks from publishers. That link equity flows directly to your Commercial Intent Page, raising its authority and search rankings."
+        }
+      },
+      {
+        id: "c4",
+        from: "node-question",    fromEdge: "bottom",
+        to:   "node-commercial",  toEdge:   "top",
+        stroke: "rgba(77,182,172,.52)", strokeWidth: 1.8, marker: "arr-t",
+        animDelay: 2.45,
+        badge: {
+          color:  "#4DB6AC",
+          title:  "Answer Real Buyer Questions",
+          label:  "Question / Problem → Commercial",
+          detail: "Question and Problem pages intercept buyers at the research stage — before they've chosen a vendor. By answering their exact questions, you build early trust and create a clear path to your Commercial Intent Page."
+        }
+      },
+      {
+        id: "c5",
+        from: "node-thesis",      fromEdge: "left",
+        to:   "node-commercial",  toEdge:   "right",
+        stroke: "rgba(100,181,246,.52)", strokeWidth: 1.8, marker: "arr-b",
+        animDelay: 2.6,
+        badge: {
+          color:  "#64B5F6",
+          title:  "Develop Authority on a Viewpoint",
+          label:  "Thesis → Commercial",
+          detail: "Thesis Pages establish your unique, buyer-centric worldview. By publishing a validation doctrine and buyer-readiness framework, you position your brand as the authoritative voice — making the Commercial page the natural next step."
+        }
+      },
+      {
+        id: "c6",
+        from: "node-proof",       fromEdge: "top",
+        to:   "node-commercial",  toEdge:   "bottom",
+        stroke: "rgba(149,117,205,.52)", strokeWidth: 1.8, marker: "arr-p",
+        animDelay: 2.75,
+        badge: {
+          color:  "#9575CD",
+          title:  "Provide Validation",
+          label:  "Proof → Commercial",
+          detail: "Proof Pages (case studies, success stories) remove purchase risk for late-stage buyers who need reassurance before committing. Social proof at this stage is often the deciding factor between choosing you or a competitor."
+        }
+      }
+    ];
+
+    /* ══════════════════════════════════════
+       RENDER NODES FROM JSON
+    ══════════════════════════════════════ */
+    const chartWrap = document.getElementById('chartWrap');
+    const resetBtn  = document.getElementById('resetBtn');
+    const svgEl     = document.getElementById('svgLayer');
+
+    const STORAGE_KEY = 'csmap-positions-v2';
+    const savedPos = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; } })();
+
+    NODES.forEach((n, i) => {
+      const pos = (savedPos && savedPos[n.id]) ? savedPos[n.id] : n.defaultPos;
+
+      const el = document.createElement('div');
+      el.className = 'node';
+      el.id = n.id;
+
+      // inline styles from JSON (avoids per-node CSS rules)
+      el.style.cssText = `
+        --accent: ${n.accent};
+        left:  ${pos.left}px;
+        top:   ${pos.top}px;
+        width: ${n.width}px;
+        background: linear-gradient(140deg, ${n.gradient[0]}, ${n.gradient[1]});
+        border-color: ${n.border};
+        box-shadow: 0 0 24px ${n.glow}, 0 6px 24px rgba(0,0,0,.45);
+        animation-delay: ${savedPos ? '0s' : n.animDelay + 's'};
+        ${savedPos ? 'opacity:1; animation: none;' : ''}
+      `;
+
+      // dataset for tooltip
+      el.dataset.title  = n.title;
+      el.dataset.color  = n.accent;
+      el.dataset.desc   = n.tooltip;
+      el.dataset.tag    = n.tag;
+      // store glow values for JS hover
+      el.dataset.glow      = n.glow;
+      el.dataset.hoverGlow = n.hoverGlow;
+      el.dataset.border    = n.border;
+      el.dataset.hoverBorder = n.hoverBorder;
+
+      el.innerHTML = `
+        <div class="node-grip"><i data-lucide="grip-vertical"></i></div>
+        <div class="node-icon"><i data-lucide="${n.icon}"></i></div>
+        <div class="node-title">${n.title}</div>
+        <div class="node-body">${n.body}</div>
+      `;
+
+      chartWrap.insertBefore(el, resetBtn);
+    });
+
+    // Stagger connection + badge fade-in delays (shorter if loading from storage)
+    const delayShift = savedPos ? -1.5 : 0;
+
+    /* ══════════════════════════════════════
+       BUILD SVG PATHS + BADGES
+    ══════════════════════════════════════ */
+    const pathEls  = {};
+    const badgeEls = {};
+
+    CONNECTIONS.forEach(conn => {
+      // path
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.id = conn.id;
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', conn.stroke);
+      path.setAttribute('stroke-width', conn.strokeWidth);
+      path.setAttribute('marker-end', `url(#${conn.marker})`);
+      path.classList.add('conn-path');
+      path.style.animationDelay = Math.max(0, conn.animDelay + delayShift) + 's';
+      svgEl.appendChild(path);
+      pathEls[conn.id] = path;
+
+      // badge (ⓘ)
+      if (conn.badge) {
+        const b = conn.badge;
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('arrow-info');
+        g.style.animationDelay = Math.max(0, conn.animDelay + 0.6 + delayShift) + 's';
+        Object.assign(g.dataset, { title: b.title, color: b.color, label: b.label, detail: b.detail });
+
+        // outer glow ring
+        const ring = _svgEl('circle', { cx:0, cy:0, r:10, fill:'none',
+          stroke: hexToRgba(b.color, .18), 'stroke-width':5 });
+        ring.classList.add('ai-ring');
+        // background circle
+        const bg = _svgEl('circle', { cx:0, cy:0, r:10,
+          fill:'rgba(8,12,26,.92)', stroke: hexToRgba(b.color, .55), 'stroke-width':1.4 });
+        // i — dot
+        const dot  = _svgEl('circle', { cx:0, cy:-3.2, r:1.1, fill: hexToRgba(b.color, .9) });
+        // i — stem
+        const stem = _svgEl('line', { x1:0, y1:-0.8, x2:0, y2:3.8,
+          stroke: hexToRgba(b.color, .9), 'stroke-width':1.6, 'stroke-linecap':'round' });
+
+        g.append(ring, bg, dot, stem);
+        svgEl.appendChild(g);
+        badgeEls[conn.id] = g;
+
+        g.addEventListener('mouseenter', () => {
+          g.querySelector('.ai-ring').setAttribute('r', '13');
+          showTooltip({ color:b.color, title:b.title, body:b.detail, arrowLabel:b.label });
+        });
+        g.addEventListener('mouseleave', () => {
+          g.querySelector('.ai-ring').setAttribute('r', '10');
+          hideTooltip();
+        });
+      }
+    });
+
+    /* ══════════════════════════════════════
+       GEOMETRY + REDRAW
+    ══════════════════════════════════════ */
+    function edgePt(el, edge) {
+      const l=el.offsetLeft, t=el.offsetTop, w=el.offsetWidth, h=el.offsetHeight;
+      return edge==='right'  ? {x:l+w,   y:t+h/2}
+           : edge==='left'   ? {x:l,     y:t+h/2}
+           : edge==='top'    ? {x:l+w/2, y:t}
+           :                   {x:l+w/2, y:t+h};  // bottom
+    }
+    function cubicMid(p0,p1,p2,p3) {
+      return { x:.125*p0.x+.375*p1.x+.375*p2.x+.125*p3.x,
+               y:.125*p0.y+.375*p1.y+.375*p2.y+.125*p3.y };
+    }
+    function cpOffset(edge, off) {
+      return edge==='right'  ? {dx:+off, dy:0}
+           : edge==='left'   ? {dx:-off, dy:0}
+           : edge==='top'    ? {dx:0, dy:-off}
+           :                   {dx:0, dy:+off};
+    }
+
+    function redraw() {
+      CONNECTIONS.forEach(conn => {
+        const fEl = document.getElementById(conn.from);
+        const tEl = document.getElementById(conn.to);
+        if (!fEl || !tEl) return;
+
+        const from = edgePt(fEl, conn.fromEdge);
+        const to   = edgePt(tEl, conn.toEdge);
+        const dx = to.x-from.x, dy = to.y-from.y;
+        const off = Math.max(55, Math.sqrt(dx*dx+dy*dy) * .38);
+
+        const fo = cpOffset(conn.fromEdge, off);
+        const to_ = cpOffset(conn.toEdge,  off);
+        const cp1 = { x: from.x+fo.dx, y: from.y+fo.dy };
+        const cp2 = { x: to.x+to_.dx,  y: to.y+to_.dy  };
+
+        pathEls[conn.id].setAttribute('d',
+          `M ${from.x},${from.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${to.x},${to.y}`);
+
+        if (badgeEls[conn.id]) {
+          const m = cubicMid(from, cp1, cp2, to);
+          badgeEls[conn.id].setAttribute('transform', `translate(${m.x},${m.y})`);
+        }
+      });
+
+      // sync pulse rings to commercial center
+      const com = document.getElementById('node-commercial');
+      if (com) {
+        const cx = com.offsetLeft + com.offsetWidth/2;
+        const cy = com.offsetTop  + com.offsetHeight/2;
+        ['pr1','pr2'].forEach(id => {
+          const el = document.getElementById(id);
+          el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+        });
+      }
+    }
+
+    // Init Lucide then draw
+    lucide.createIcons();
+    requestAnimationFrame(() => requestAnimationFrame(redraw));
+
+    /* ══════════════════════════════════════
+       DRAG — the opacity fix is here:
+       Before cancelling animation we freeze opacity to 1 inline,
+       so 'animation:none' can't snap it back to 0.
+    ══════════════════════════════════════ */
+    let dragEl=null, startX=0, startY=0, origL=0, origT=0, didMove=false;
+
+    chartWrap.addEventListener('mousedown', e => {
+      const node = e.target.closest('.node');
+      if (!node || e.button !== 0) return;
+
+      // ── Freeze node at current visible opacity BEFORE killing animation ──
+      node.style.opacity   = '1';
+      node.style.animation = 'none';
+      node.classList.add('is-dragging');
+
+      dragEl  = node;
+      startX  = e.clientX; startY = e.clientY;
+      origL   = node.offsetLeft; origT = node.offsetTop;
+      didMove = false;
+
+      hideTooltip();
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragEl) return;
+      didMove = true;
+
+      const wW = chartWrap.offsetWidth,  wH = chartWrap.offsetHeight;
+      const nW = dragEl.offsetWidth,     nH = dragEl.offsetHeight;
+
+      dragEl.style.left = Math.max(0, Math.min(wW-nW, origL + e.clientX - startX)) + 'px';
+      dragEl.style.top  = Math.max(0, Math.min(wH-nH, origT + e.clientY - startY)) + 'px';
+      redraw();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragEl) return;
+      dragEl.classList.remove('is-dragging');
+      dragEl = null;
+      if (didMove) savePositions();
+    });
+
+    /* ══════════════════════════════════════
+       HOVER EFFECTS (JS-driven since nodes are dynamic)
+    ══════════════════════════════════════ */
+    chartWrap.addEventListener('mouseover', e => {
+      const node = e.target.closest('.node');
+      if (!node || node.classList.contains('is-dragging')) return;
+      node.style.boxShadow   = `0 0 50px ${node.dataset.hoverGlow}, 0 14px 40px rgba(0,0,0,.55)`;
+      node.style.borderColor = node.dataset.hoverBorder;
+      showTooltip({ color:node.dataset.color, title:node.dataset.title,
+                    body:node.dataset.desc, tag:node.dataset.tag });
+    });
+    chartWrap.addEventListener('mouseout', e => {
+      const node = e.target.closest('.node');
+      if (!node) return;
+      node.style.boxShadow   = `0 0 24px ${node.dataset.glow}, 0 6px 24px rgba(0,0,0,.45)`;
+      node.style.borderColor = node.dataset.border;
+      hideTooltip();
+    });
+
+    /* ══════════════════════════════════════
+       RIPPLE on click (only if not a drag)
+    ══════════════════════════════════════ */
+    chartWrap.addEventListener('click', e => {
+      if (didMove) return;
+      const node = e.target.closest('.node');
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const sz   = Math.max(rect.width, rect.height) * 1.7;
+      const rip  = document.createElement('span');
+      rip.style.cssText = `position:absolute;border-radius:50%;pointer-events:none;
+        width:${sz}px;height:${sz}px;
+        left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px;
+        background:rgba(255,255,255,.09);transform:scale(0);opacity:1;
+        transition:transform .55s ease,opacity .55s ease;`;
+      node.appendChild(rip);
+      requestAnimationFrame(() => { rip.style.transform='scale(1)'; rip.style.opacity='0'; });
+      setTimeout(() => rip.remove(), 600);
+    });
+
+    /* ══════════════════════════════════════
+       LOCAL STORAGE
+    ══════════════════════════════════════ */
+    function savePositions() {
+      const pos = {};
+      document.querySelectorAll('.node').forEach(n => { pos[n.id] = { left:n.offsetLeft, top:n.offsetTop }; });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+
+    /* ══════════════════════════════════════
+       TOOLTIP
+    ══════════════════════════════════════ */
+    const ttEl    = document.getElementById('tooltip');
+    const ttDot   = document.getElementById('ttDot');
+    const ttTitle = document.getElementById('ttTitle');
+    const ttBody  = document.getElementById('ttBody');
+    const ttTag   = document.getElementById('ttTag');
+    const ttArrow = document.getElementById('ttArrow');
+    let mx=0, my=0, ttOn=false;
+
+    document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; if(ttOn) placeTT(); });
+
+    function showTooltip({ color, title, body, tag, arrowLabel }) {
+      ttDot.style.cssText = `background:${color};box-shadow:0 0 8px ${color}`;
+      ttTitle.textContent = title || '';
+      ttBody.textContent  = body  || '';
+      ttTag.textContent   = tag   || '';
+      ttTag.style.display = tag   ? 'inline-block' : 'none';
+      ttArrow.textContent    = arrowLabel || '';
+      ttArrow.style.display  = arrowLabel ? 'block' : 'none';
+      ttArrow.style.color    = color;
+      ttEl.classList.add('show'); ttOn = true; placeTT();
+    }
+    function hideTooltip() { ttEl.classList.remove('show'); ttOn = false; }
+    function placeTT() {
+      const tw=ttEl.offsetWidth||272, th=ttEl.offsetHeight||130;
+      let x=mx+20, y=my-14;
+      if (x+tw > window.innerWidth-12)  x = mx-tw-20;
+      if (y+th > window.innerHeight-12) y = window.innerHeight-th-12;
+      if (y < 8) y = 8;
+      ttEl.style.left = x+'px'; ttEl.style.top = y+'px';
+    }
+
+    /* ══════════════════════════════════════
+       UTILS
+    ══════════════════════════════════════ */
+    function _svgEl(tag, attrs) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+    function hexToRgba(hex, a) {
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+  })();
+  </script>
+</body>
+</html>
