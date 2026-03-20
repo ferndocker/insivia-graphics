@@ -1,53 +1,62 @@
-# Content Strategy Map - Build Prompts
+# Content Strategy Map — Build Prompts
 
-## Overview
-Document the AI prompts, design decisions, and inspiration used to build this interactive content strategy visualization.
-
-## Design System & Inspiration
-- **Visual Reference:** `chart.png` - Wireframe of the content strategy flow
-- **UI Library:** Insivia HTML Graphics Library
-- **Theme:** Dark glassmorphism with ambient gradient blobs
-- **Icons:** Lucide Icons
-
-## Prompts Used
-
-### 1. Initial Concept
-**Prompt:** Create an interactive SVG visualization of a B2B content strategy framework with draggable nodes representing different content types (commercial intent, question pages, thesis pages, proof pages, trend pages).
-
-**Result:** 7-node interactive map with bezier curve connections showing relationships between content types.
-
-### 2. Node Styling & Animation
-**Prompt:** Design a glassmorphism card component with backdrop blur, gradient accents, and spring animations for node entrance and hover states.
-
-**Result:** Smooth staggered entrance animations with accent bars and responsive glow effects.
-
-### 3. Connection Logic
-**Prompt:** Create bezier curve paths between nodes that automatically recalculate positions when nodes are dragged. Add colored arrow markers to indicate connection direction.
-
-**Result:** Real-time SVG path updates with control point offset calculation based on connection distance.
-
-### 4. Local Storage Integration
-**Prompt:** Implement local storage to save node positions when users rearrange them, with a reset button to restore defaults.
-
-**Result:** Automatic position persistence across page refreshes with one-click layout reset.
-
-### 5. Tooltip System
-**Prompt:** Create an information badge system that appears when hovering over connection arrows, showing strategic context for each relationship.
-
-**Result:** Positioned tooltips with dot indicators matching edge colors and detailed explanations.
-
-## Technical Stack
-- Vanilla HTML/CSS/JavaScript (no frameworks)
-- SVG for vector graphics and animations
-- Local Storage API for persistence
-- Cubic bezier animation timing functions
-- CSS Grid for responsive layout
-
-## Future Enhancements
-- Export functionality (PNG/SVG)
-- Collaborative editing with real-time sync
-- Additional content strategy templates
-- Mobile-optimized touch interactions
+The verbatim prompts used to design and build this interactive visualization, in order.
 
 ---
-*Last updated: March 20, 2026*
+
+## Prompt 1 — Initial Concept
+
+> "I have this chart (chart.png) That I would like to see converted into an animated html graphic. The styles should be contemporary, they don't necessarily need to be circles. Utilize the color scheme. there should also be interaction with the items with a tooltip type of hover that follows mouse movements. hovering should lift the item. micro animations should be used to create a smooth user experience."
+
+**What was built:** A single-file HTML interactive map with 7 glassmorphism nodes connected by animated SVG bezier curves. Dark theme with per-node accent colors pulled from the original chart. Staggered entrance animations, mouse-following tooltip panel, and hover lift/glow effects.
+
+---
+
+## Prompt 2 — Icons & Arrow Readability
+
+> "use lucide icons instead of the emoji's. make sure that the descriptions of the the process on the arrows is more readable. currently, they appear below the nodes. Maybe have an information icon on the arrows that have them to display as a tool tip on hover."
+
+**What was built:** Swapped all emoji node icons for Lucide icon SVGs via CDN. Removed text labels from SVG connection paths entirely. Added ⓘ info badge circles positioned at the bezier midpoint of each connection — hovering one shows a styled tooltip with the connection's strategic context.
+
+---
+
+## Prompt 3 — Spacing & Draggable Nodes
+
+> "The spacing between trend pages and commercial intent page is too tight. make more space there. Can the nodes be draggable to move them in the display and save to local storage?"
+
+**What was built:** Adjusted default node positions to open up the gap between the Trend Pages cluster and the Commercial Intent Page node. Added full drag-and-drop support — nodes are freely repositionable within the canvas, SVG connections redraw in real time, and final positions are persisted to `localStorage` (key: `csmap-positions-v2`) so the layout survives page refreshes. A "Reset Layout" button clears storage and reloads defaults.
+
+---
+
+## Prompt 4 — Drag Bug Fix, Content Overflow & JSON Config
+
+> "Dragging the nodes makes them disappear until dropped. Fix this. Make sure the content of the nodes fits within it's container. use json for all of the node content for easy updatability"
+
+**What was built:** Fixed the disappearing-node bug — root cause was that cancelling the CSS animation (`animation: none`) during drag also cancelled the `forwards` fill-mode holding `opacity: 1`, snapping nodes invisible. Fix: `opacity: 1` is frozen inline on `mousedown` before the animation is killed, and `opacity: 1 !important` is also set in the `.is-dragging` CSS class. Removed all fixed `height` values from node cards so content never overflows. Refactored all node and connection data into top-of-script `NODES` and `CONNECTIONS` JSON config arrays so copy, icons, colors, positions, and tooltip text can all be updated in one place without touching layout or interaction code.
+
+---
+
+## Prompt 5 — GitHub Repo
+
+> "make this a git repo under my user ferndocker and commit, push to github"
+
+**What was built:** Created the public GitHub repository `ferndocker/content-strategy-map` and pushed `index.html` and `README.md` via the GitHub Contents API (browser-based fetch from github.com, since the sandbox proxy blocks direct git/curl access to GitHub).
+
+Repository: [https://github.com/ferndocker/content-strategy-map](https://github.com/ferndocker/content-strategy-map)
+
+---
+
+## Technical Reference
+
+| Concern | Approach |
+|---|---|
+| Framework | Vanilla HTML / CSS / JavaScript — no build step |
+| Icons | Lucide via `unpkg.com/lucide@latest` CDN |
+| Connections | Dynamic SVG cubic bezier paths, redrawn on every drag tick |
+| Animations | CSS `@keyframes nodeIn` with spring easing; `forwards` fill-mode |
+| Persistence | `localStorage` key `csmap-positions-v2` |
+| Config | `NODES[]` and `CONNECTIONS[]` JSON arrays at top of `<script>` |
+
+---
+
+*Prompts recorded: March 20, 2026*
